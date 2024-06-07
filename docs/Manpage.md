@@ -142,7 +142,7 @@ old. This can be adjusted with `HOMEBREW_CLEANUP_MAX_AGE_DAYS`.
 
 : Show what would be removed, but do not actually remove anything.
 
-`-s`
+`-s`, `--scrub`
 
 : Scrub the cache, including downloads for even the latest versions. Note that
   downloads for any installed formulae or casks will still not be deleted. If
@@ -4067,11 +4067,11 @@ Homebrew's Technical Steering Committee is Bo Anderson, FX Coudert, Michka
 Popoff, Mike McQuaid and Rylan Polster.
 
 Homebrew's maintainers are Alexander Bayandin, Bevan Kay, Bo Anderson, Branch
-Vincent, Caleb Xu, Carlo Cabrera, David Baumgold, Douglas Eichelberger, Dustin
-Rodrigues, Eric Knibbe, FX Coudert, Issy Long, Justin Krehel, Markus Reiter,
-Miccal Matthews, Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna,
-Patrick Linnane, Razvan Azamfirei, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam
-Ford, Sean Molenaar, Thierry Moisan, Timothy Sutton and William Woodruff.
+Vincent, Caleb Xu, Carlo Cabrera, Douglas Eichelberger, Dustin Rodrigues, Eric
+Knibbe, FX Coudert, Issy Long, Justin Krehel, Markus Reiter, Miccal Matthews,
+Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick Linnane,
+Razvan Azamfirei, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean Molenaar,
+Thierry Moisan, Timothy Sutton and William Woodruff.
 
 Former maintainers with significant contributions include Misty De Méo, Shaun
 Jackman, Vítor Galvão, Claudia Pellegrino, Seeker, Jan Viljanen, JCount,
