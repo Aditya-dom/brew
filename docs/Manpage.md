@@ -1162,6 +1162,23 @@ evaluation of this command's output to your dotfiles (e.g. `~/.bash_profile` or
 The shell can be specified explicitly with a supported shell name parameter.
 Unknown shells will output POSIX exports.
 
+### `tab` \[`--installed-on-request`\] \[`--no-installed-on-request`\] *`formula`* \[...\]
+
+Edit tab information for installed formulae.
+
+This can be useful when you want to control whether an installed formula should
+be removed by `brew autoremove`. To prevent removal, mark the formula as
+installed on request; to allow removal, mark the formula as not installed on
+request.
+
+`--installed-on-request`
+
+: Mark *`formula`* as installed on request.
+
+`--no-installed-on-request`
+
+: Mark *`formula`* as not installed on request.
+
 ### `tap` \[*`options`*\] \[*`user`*`/`*`repo`*\] \[*`URL`*\]
 
 Tap a formula repository. If no arguments are provided, list all installed taps.
@@ -3546,8 +3563,8 @@ command execution e.g. `$(cat file)`.
 
 `HOMEBREW_BOOTSNAP`
 
-: If set, use Bootsnap to speed up repeated `brew` calls. A no-op when using
-  Homebrew's vendored, relocatable Ruby on macOS (as it doesn't work).
+: If set, use Bootsnap to speed up repeated `brew` calls. A no-op on Linux when
+  not using Homebrew's vendored, relocatable Ruby.
 
 `HOMEBREW_BOTTLE_DOMAIN`
 

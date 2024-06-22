@@ -44,9 +44,9 @@ module Homebrew
                               debug: false, verbose: false)
       raise ArgumentError, "Invalid output type: #{output_type.inspect}" if [:print, :json].exclude?(output_type)
 
-      ruby_files = []
-      shell_files = []
-      actionlint_files = []
+      ruby_files = T.let([], T::Array[Pathname])
+      shell_files = T.let([], T::Array[Pathname])
+      actionlint_files = T.let([], T::Array[Pathname])
       Array(files).map(&method(:Pathname))
                   .each do |path|
         case path.extname
@@ -57,7 +57,14 @@ module Homebrew
         when ".yml"
           actionlint_files << path if path.realpath.to_s.include?("/.github/workflows/")
         else
-          shell_files << path if path.realpath == HOMEBREW_BREW_FILE.realpath
+          ruby_files << path
+          shell_files += if [HOMEBREW_PREFIX, HOMEBREW_REPOSITORY].include?(path)
+            shell_scripts
+          else
+            path.glob("**/*.sh")
+                .reject { |path| path.to_s.include?("/vendor/") || path.directory? }
+          end
+          actionlint_files += (path/".github/workflows").glob("*.y{,a}ml")
         end
       end
 
@@ -144,8 +151,8 @@ module Homebrew
       files&.map!(&:expand_path)
       if files.blank? || files == [HOMEBREW_REPOSITORY]
         files = [HOMEBREW_LIBRARY_PATH]
-      elsif files.any? { |f| f.to_s.start_with? HOMEBREW_REPOSITORY/"docs" }
-        args << "--config" << (HOMEBREW_REPOSITORY/"docs/.rubocop.yml")
+      elsif files.any? { |f| f.to_s.start_with?(HOMEBREW_REPOSITORY/"docs") || (f.basename.to_s == "docs") }
+        args << "--config" << (HOMEBREW_REPOSITORY/"docs/docs_rubocop_style.yml")
       elsif files.none? { |f| f.to_s.start_with? HOMEBREW_LIBRARY_PATH }
         args << "--config" << (HOMEBREW_LIBRARY/".rubocop.yml")
       end
@@ -263,8 +270,11 @@ module Homebrew
 
     def self.run_actionlint(files)
       files = github_workflow_files if files.blank?
+      # the ignore is to avoid false positives in e.g. actions, homebrew-test-bot
       system actionlint, "-shellcheck", shellcheck,
              "-config-file", HOMEBREW_REPOSITORY/".github/actionlint.yaml",
+             "-ignore", "image: string; options: string",
+             "-ignore", "label .* is unknown",
              *files
       $CHILD_STATUS.success?
     end

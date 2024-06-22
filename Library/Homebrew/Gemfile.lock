@@ -1,13 +1,11 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.8.6)
-      public_suffix (>= 2.0.2, < 6.0)
+    addressable (2.8.7)
+      public_suffix (>= 2.0.2, < 7.0)
     ast (2.4.2)
     bigdecimal (3.1.8)
     bindata (2.5.0)
-    bootsnap (1.18.3)
-      msgpack (~> 1.2)
     coderay (1.1.3)
     commander (5.0.0)
       highline (~> 3.0.0)
@@ -15,7 +13,7 @@ GEM
     docile (1.4.0)
     elftools (1.3.1)
       bindata (~> 2)
-    erubi (1.12.0)
+    erubi (1.13.0)
     hana (1.3.7)
     highline (3.0.1)
     json (2.7.2)
@@ -28,8 +26,7 @@ GEM
       rexml
     language_server-protocol (3.17.0.3)
     method_source (1.1.0)
-    minitest (5.23.1)
-    msgpack (1.7.2)
+    minitest (5.24.0)
     netrc (0.11.0)
     parallel (1.25.1)
     parallel_tests (4.7.1)
@@ -39,7 +36,7 @@ GEM
       parser
       rainbow (~> 3.0)
       sorbet-runtime (>= 0.5)
-    parser (3.3.2.0)
+    parser (3.3.3.0)
       ast (~> 2.4.1)
       racc
     patchelf (1.5.1)
@@ -49,7 +46,7 @@ GEM
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    public_suffix (5.0.5)
+    public_suffix (6.0.0)
     racc (1.8.0)
     rainbow (3.1.1)
     rbi (0.1.13)
@@ -65,7 +62,7 @@ GEM
       rspec-mocks (~> 3.13.0)
     rspec-core (3.13.0)
       rspec-support (~> 3.13.0)
-    rspec-expectations (3.13.0)
+    rspec-expectations (3.13.1)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-github (2.4.0)
@@ -95,7 +92,7 @@ GEM
       parser (>= 3.3.1.0)
     rubocop-md (1.2.2)
       rubocop (>= 1.0)
-    rubocop-performance (1.21.0)
+    rubocop-performance (1.21.1)
       rubocop (>= 1.48.1, < 2.0)
       rubocop-ast (>= 1.31.1, < 2.0)
     rubocop-rspec (3.0.1)
@@ -115,15 +112,15 @@ GEM
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
     simpleidn (0.2.3)
-    sorbet (0.5.11428)
-      sorbet-static (= 0.5.11428)
-    sorbet-runtime (0.5.11428)
-    sorbet-static (0.5.11428-aarch64-linux)
-    sorbet-static (0.5.11428-universal-darwin)
-    sorbet-static (0.5.11428-x86_64-linux)
-    sorbet-static-and-runtime (0.5.11428)
-      sorbet (= 0.5.11428)
-      sorbet-runtime (= 0.5.11428)
+    sorbet (0.5.11439)
+      sorbet-static (= 0.5.11439)
+    sorbet-runtime (0.5.11439)
+    sorbet-static (0.5.11439-aarch64-linux)
+    sorbet-static (0.5.11439-universal-darwin)
+    sorbet-static (0.5.11439-x86_64-linux)
+    sorbet-static-and-runtime (0.5.11439)
+      sorbet (= 0.5.11439)
+      sorbet-runtime (= 0.5.11439)
     spoom (1.3.2)
       erubi (>= 1.10.0)
       prism (>= 0.19.0)
@@ -131,7 +128,7 @@ GEM
       thor (>= 0.19.2)
     stackprof (0.2.26)
     strscan (3.1.0)
-    tapioca (0.14.3)
+    tapioca (0.14.4)
       bundler (>= 2.2.25)
       netrc (>= 0.11.0)
       parallel (>= 1.21.0)
@@ -158,7 +155,6 @@ PLATFORMS
 
 DEPENDENCIES
   addressable
-  bootsnap
   json_schemer
   kramdown
   method_source
@@ -197,7 +193,7 @@ DEPENDENCIES
   yard-sorbet
 
 RUBY VERSION
-   ruby 3.3.2p78
+   ruby 3.3.3p89
 
 BUNDLED WITH
-   2.5.9
+   2.5.11
