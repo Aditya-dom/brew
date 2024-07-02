@@ -759,7 +759,7 @@ module Formulary
 
     sig {
       params(ref: T.any(String, Pathname, URI::Generic), from: Symbol, warn: T::Boolean)
-        .returns(T.nilable(T.attached_class))
+        .returns(T.nilable(FormulaLoader))
     }
     def self.try_new(ref, from: T.unsafe(nil), warn: false)
       ref = ref.to_s
@@ -776,7 +776,11 @@ module Formulary
         {}
       end
 
-      new(name, path, tap:, **options)
+      if type == :migration && tap.core_tap? && (loader = FromAPILoader.try_new(name))
+        loader
+      else
+        new(name, path, tap:, **options)
+      end
     end
 
     sig { params(name: String, path: Pathname, tap: Tap, alias_name: String).void }
@@ -811,7 +815,7 @@ module Formulary
   class FromNameLoader < FromTapLoader
     sig {
       params(ref: T.any(String, Pathname, URI::Generic), from: Symbol, warn: T::Boolean)
-        .returns(T.nilable(T.attached_class))
+        .returns(T.nilable(FormulaLoader))
     }
     def self.try_new(ref, from: T.unsafe(nil), warn: false)
       return unless ref.is_a?(String)
@@ -821,14 +825,14 @@ module Formulary
 
       # If it exists in the default tap, never treat it as ambiguous with another tap.
       if (core_tap = CoreTap.instance).installed? &&
-         (loader = super("#{core_tap}/#{name}", warn:))&.path&.exist?
-        return loader
+         (core_loader = super("#{core_tap}/#{name}", warn:))&.path&.exist?
+        return core_loader
       end
 
       loaders = Tap.select { |tap| tap.installed? && !tap.core_tap? }
                    .filter_map { |tap| super("#{tap}/#{name}", warn:) }
                    .uniq(&:path)
-                   .select { |tap| tap.path.exist? }
+                   .select { |loader| loader.is_a?(FromAPILoader) || loader.path.exist? }
 
       case loaders.count
       when 1
