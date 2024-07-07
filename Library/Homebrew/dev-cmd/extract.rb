@@ -1,4 +1,4 @@
-# typed: true
+# typed: true # This cannot be `# typed: strict` due to the use of `undef`.
 # frozen_string_literal: true
 
 require "abstract_command"
@@ -154,7 +154,7 @@ module Homebrew
           odebug "Overwriting existing formula at #{path}"
           path.delete
         end
-        ohai "Writing formula for #{name} from revision #{rev} to:", path
+        ohai "Writing formula for #{name} at #{version} from revision #{rev} to:", path
         path.dirname.mkpath
         path.write result
       end
