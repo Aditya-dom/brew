@@ -258,10 +258,13 @@ module Homebrew
               require_sha:    args.require_sha?,
               skip_cask_deps: args.skip_cask_deps?,
               verbose:        args.verbose?,
+              quiet:          args.quiet?,
               args:,
             )
           end
         end
+
+        formulae = Homebrew::Attestation.sort_formulae_for_install(formulae) if Homebrew::Attestation.enabled?
 
         # if the user's flags will prevent bottle only-installations when no
         # developer tools are available, we need to stop them early on
@@ -338,6 +341,8 @@ module Homebrew
         Homebrew.messages.display_messages(display_times: args.display_times?)
       rescue FormulaUnreadableError, FormulaClassUnavailableError,
              TapFormulaUnreadableError, TapFormulaClassUnavailableError => e
+        require "utils/backtrace"
+
         # Need to rescue before `FormulaUnavailableError` (superclass of this)
         # is handled, as searching for a formula doesn't make sense here (the
         # formula was found, but there's a problem with its implementation).

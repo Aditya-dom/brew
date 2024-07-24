@@ -279,6 +279,9 @@ class SystemCommand
 
   sig { returns(T::Boolean) }
   def must_succeed?; end
+
+  sig { returns(T::Boolean) }
+  def reset_uid?; end
 end
 
 module Utils
@@ -343,6 +346,9 @@ module Cask
 
     sig { returns(T::Boolean) }
     def installed_as_dependency?; end
+
+    sig { returns(T::Boolean) }
+    def installed_on_request?; end
 
     sig { returns(T::Boolean) }
     def quarantine?; end

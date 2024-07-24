@@ -18,6 +18,9 @@ class Homebrew::DevCmd::Bump::Args < Homebrew::CLI::Args
   def casks?; end
 
   sig { returns(T::Boolean) }
+  def eval_all?; end
+
+  sig { returns(T::Boolean) }
   def formula?; end
 
   sig { returns(T::Boolean) }
@@ -29,9 +32,6 @@ class Homebrew::DevCmd::Bump::Args < Homebrew::CLI::Args
   sig { returns(T::Boolean) }
   def installed?; end
 
-  sig { returns(T.nilable(String)) }
-  def limit; end
-
   sig { returns(T::Boolean) }
   def no_fork?; end
 
@@ -40,6 +40,9 @@ class Homebrew::DevCmd::Bump::Args < Homebrew::CLI::Args
 
   sig { returns(T::Boolean) }
   def open_pr?; end
+
+  sig { returns(T::Boolean) }
+  def repology?; end
 
   sig { returns(T.nilable(String)) }
   def start_with; end

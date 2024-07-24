@@ -2,10 +2,13 @@
 # frozen_string_literal: true
 
 require "abstract_command"
+require "shell_command"
 
 module Homebrew
   module Cmd
     class Repository < AbstractCommand
+      include ShellCommand
+
       sig { override.returns(String) }
       def self.command_name = "--repository"
 
@@ -17,15 +20,6 @@ module Homebrew
         EOS
 
         named_args :tap
-      end
-
-      sig { override.void }
-      def run
-        if args.no_named?
-          puts HOMEBREW_REPOSITORY
-        else
-          puts args.named.to_taps.map(&:path)
-        end
       end
     end
   end

@@ -1141,12 +1141,14 @@ Perform a substring search of cask tokens and formula names for *`text`*. If
 
 : Search for *`text`* in the given database.
 
-### `setup-ruby [command]`
+### `setup-ruby` \[*`command`* ...\]
 
 Installs and configures Homebrew's Ruby. If `command` is passed, it will only
 run Bundler if necessary for that command.
 
-### `shellenv [bash|csh|fish|pwsh|sh|tcsh|zsh]`
+### `shellenv` \[*`shell`* ...\]
+
+Valid shells: bash\|csh\|fish\|pwsh\|sh\|tcsh\|zsh
 
 Print export statements. When run in a shell, this installation of Homebrew will
 be added to your `PATH`, `MANPATH`, and `INFOPATH`.
@@ -1162,9 +1164,9 @@ evaluation of this command's output to your dotfiles (e.g. `~/.bash_profile` or
 The shell can be specified explicitly with a supported shell name parameter.
 Unknown shells will output POSIX exports.
 
-### `tab` \[`--installed-on-request`\] \[`--no-installed-on-request`\] *`formula`* \[...\]
+### `tab` \[*`options`*\] *`installed_formula`*\|*`installed_cask`* \[...\]
 
-Edit tab information for installed formulae.
+Edit tab information for installed formulae or casks.
 
 This can be useful when you want to control whether an installed formula should
 be removed by `brew autoremove`. To prevent removal, mark the formula as
@@ -1173,11 +1175,19 @@ request.
 
 `--installed-on-request`
 
-: Mark *`formula`* as installed on request.
+: Mark *`installed_formula`* or *`installed_cask`* as installed on request.
 
 `--no-installed-on-request`
 
-: Mark *`formula`* as not installed on request.
+: Mark *`installed_formula`* or *`installed_cask`* as not installed on request.
+
+`--formula`
+
+: Only mark formulae.
+
+`--cask`
+
+: Only mark casks.
 
 ### `tap` \[*`options`*\] \[*`user`*`/`*`repo`*\] \[*`URL`*\]
 
@@ -1276,7 +1286,7 @@ Remove a tapped formula repository.
 
 : Untap even if formulae or casks from this tap are currently installed.
 
-### `update` \[*`options`*\]
+### `update`, `up` \[*`options`*\]
 
 Fetch the newest version of Homebrew and all formulae from GitHub using `git`(1)
 and perform any necessary migrations.
@@ -1293,7 +1303,15 @@ and perform any necessary migrations.
 
 : Always do a slower, full update check (even if unnecessary).
 
-### `update-reset` \[*`path-to-tap-repository`* ...\]
+`-v`, `--verbose`
+
+: Print the directories checked and `git` operations performed.
+
+`-d`, `--debug`
+
+: Display a trace of all shell commands as they are executed.
+
+### `update-reset` \[*`repository`* ...\]
 
 Fetch and reset Homebrew and all tap repositories (or any specified
 *`repository`*) using `git`(1) to their latest `origin/HEAD`.
@@ -1736,9 +1754,9 @@ at its original value, while `--no-rebuild` will remove it.
 
 ### `bump` \[*`options`*\] \[*`formula`*\|*`cask`* ...\]
 
-Display out-of-date brew formulae and the latest version available. If the
-returned current and livecheck versions differ or when querying specific
-formulae, also displays whether a pull request has been opened with the URL.
+Displays out-of-date packages and the latest version available. If the returned
+current and livecheck versions differ or when querying specific packages, also
+displays whether a pull request has been opened with the URL.
 
 `--full-name`
 
@@ -1756,6 +1774,14 @@ formulae, also displays whether a pull request has been opened with the URL.
 
 : Check only casks.
 
+`--eval-all`
+
+: Evaluate all formulae and casks.
+
+`--repology`
+
+: Use Repology to check for outdated packages.
+
 `--tap`
 
 : Check formulae and casks within the given tap, specified as
@@ -1772,10 +1798,6 @@ formulae, also displays whether a pull request has been opened with the URL.
 `--open-pr`
 
 : Open a pull request for the new version if none have been opened yet.
-
-`--limit`
-
-: Limit number of package results returned.
 
 `--start-with`
 
@@ -3669,6 +3691,11 @@ command execution e.g. `$(cat file)`.
 : If set, tweak behaviour to be more relevant for Homebrew developers (active or
   budding) by e.g. turning warnings into errors.
 
+`HOMEBREW_DISABLE_DEBREW`
+
+: If set, the interactive formula debugger available via `--debug` will be
+  disabled.
+
 `HOMEBREW_DISABLE_LOAD_FORMULA`
 
 : If set, refuse to load formulae. This is useful when formulae are not trusted
@@ -3941,6 +3968,11 @@ command execution e.g. `$(cat file)`.
 
 : If set, `brew update` will not show the list of newly added formulae/casks.
 
+`HOMEBREW_NO_VERIFY_ATTESTATIONS`
+
+: If set, Homebrew not verify cryptographic attestations of build provenance for
+  bottles from homebrew-core.
+
 `HOMEBREW_PIP_INDEX_URL`
 
 : If set, `brew install` *`formula`* will use this URL to download PyPI package
@@ -4090,10 +4122,10 @@ Popoff, Mike McQuaid and Rylan Polster.
 
 Homebrew's maintainers are Alexander Bayandin, Bevan Kay, Bo Anderson, Branch
 Vincent, Caleb Xu, Carlo Cabrera, Douglas Eichelberger, Dustin Rodrigues, Eric
-Knibbe, FX Coudert, Issy Long, Justin Krehel, Markus Reiter, Miccal Matthews,
-Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick Linnane,
-Razvan Azamfirei, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean Molenaar,
-Thierry Moisan, Timothy Sutton, William Woodruff and Štefan Baebler.
+Knibbe, FX Coudert, Issy Long, Justin Krehel, Klaus Hipp, Markus Reiter, Miccal
+Matthews, Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick
+Linnane, Razvan Azamfirei, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean
+Molenaar, Thierry Moisan, Timothy Sutton, William Woodruff and Štefan Baebler.
 
 Former maintainers with significant contributions include Misty De Méo, Shaun
 Jackman, Vítor Galvão, Claudia Pellegrino, Seeker, Jan Viljanen, JCount,

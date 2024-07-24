@@ -3,6 +3,7 @@
 
 require "system_command"
 require "tempfile"
+require "utils/curl"
 require "utils/shell"
 require "utils/formatter"
 require "utils/uid"
@@ -181,7 +182,9 @@ module GitHub
     end
 
     def self.credentials
-      @credentials ||= Homebrew::EnvConfig.github_api_token || github_cli_token || keychain_username_password
+      @credentials ||= Homebrew::EnvConfig.github_api_token.presence
+      @credentials ||= github_cli_token.presence
+      @credentials ||= keychain_username_password.presence
     end
 
     sig { returns(Symbol) }

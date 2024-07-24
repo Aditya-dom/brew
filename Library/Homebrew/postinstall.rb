@@ -6,10 +6,12 @@ raise "#{__FILE__} must not be loaded via `require`." if $PROGRAM_NAME != __FILE
 old_trap = trap("INT") { exit! 130 }
 
 require_relative "global"
+
 require "fcntl"
 require "socket"
 require "cli/parser"
 require "cmd/postinstall"
+require "json/add/exception"
 
 begin
   args = Homebrew::Cmd::Postinstall.new.args
@@ -19,7 +21,7 @@ begin
   trap("INT", old_trap)
 
   formula = T.must(args.named.to_resolved_formulae.first)
-  if args.debug?
+  if args.debug? && !Homebrew::EnvConfig.disable_debrew?
     require "debrew"
     formula.extend(Debrew::Formula)
   end

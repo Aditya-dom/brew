@@ -4,6 +4,7 @@
 require "date"
 require "json"
 require "utils/popen"
+require "utils/github/api"
 require "exceptions"
 require "system_command"
 
@@ -13,6 +14,9 @@ module Homebrew
 
     # @api private
     HOMEBREW_CORE_REPO = "Homebrew/homebrew-core"
+
+    # @api private
+    GH_ATTESTATION_MIN_VERSION = T.let(Version.new("2.49.0").freeze, Version)
 
     # @api private
     BACKFILL_REPO = "trailofbits/homebrew-brew-verify"
@@ -29,6 +33,11 @@ module Homebrew
     # @api private
     BACKFILL_CUTOFF = T.let(DateTime.new(2024, 3, 14).freeze, DateTime)
 
+    # Raised when the attestation was not found.
+    #
+    # @api private
+    class MissingAttestationError < RuntimeError; end
+
     # Raised when attestation verification fails.
     #
     # @api private
@@ -40,17 +49,71 @@ module Homebrew
     # @api private
     class GhAuthNeeded < RuntimeError; end
 
+    # Raised if attestation verification cannot continue due to invalid
+    # credentials.
+    #
+    # @api private
+    class GhAuthInvalid < RuntimeError; end
+
+    # Returns whether attestation verification is enabled.
+    #
+    # @api private
+    sig { returns(T::Boolean) }
+    def self.enabled?
+      return false if Homebrew::EnvConfig.no_verify_attestations?
+      return true if Homebrew::EnvConfig.verify_attestations?
+      return false if GitHub::API.credentials.blank?
+      return false if ENV.fetch("CI", false)
+      return false if OS.unsupported_configuration?
+
+      Homebrew::EnvConfig.developer? || Homebrew::EnvConfig.devcmdrun?
+    end
+
     # Returns a path to a suitable `gh` executable for attestation verification.
     #
     # @api private
     sig { returns(Pathname) }
     def self.gh_executable
-      # NOTE: We disable HOMEBREW_VERIFY_ATTESTATIONS when installing `gh` itself,
+      # NOTE: We set HOMEBREW_NO_VERIFY_ATTESTATIONS when installing `gh` itself,
       #       to prevent a cycle during bootstrapping. This can eventually be resolved
       #       by vendoring a pure-Ruby Sigstore verifier client.
-      @gh_executable ||= T.let(with_env("HOMEBREW_VERIFY_ATTESTATIONS" => nil) do
-        ensure_executable!("gh")
-      end, T.nilable(Pathname))
+      @gh_executable ||= T.let(nil, T.nilable(Pathname))
+      return @gh_executable if @gh_executable.present?
+
+      with_env(HOMEBREW_NO_VERIFY_ATTESTATIONS: "1") do
+        @gh_executable = ensure_executable!("gh", reason: "verifying attestations")
+
+        gh_version = Version.new(system_command!(@gh_executable, args: ["--version"], print_stderr: false)
+                                 .stdout.match(/\d+(?:\.\d+)+/i).to_s)
+        if gh_version < GH_ATTESTATION_MIN_VERSION
+          if Formula["gh"].version < GH_ATTESTATION_MIN_VERSION
+            raise "#{@gh_executable} is too old, you must upgrade it to >=#{GH_ATTESTATION_MIN_VERSION} to continue"
+          end
+
+          @gh_executable = ensure_formula_installed!("gh", latest: true,
+                                                           reason: "verifying attestations").opt_bin/"gh"
+        end
+      end
+
+      T.must(@gh_executable)
+    end
+
+    # Prioritize installing `gh` first if it's in the formula list
+    # or check for the existence of the `gh` executable elsewhere.
+    #
+    # This ensures that a valid version of `gh` is installed before
+    # we use it to check the attestations of any other formulae we
+    # want to install.
+    #
+    # @api private
+    sig { params(formulae: T::Array[Formula]).returns(T::Array[Formula]) }
+    def self.sort_formulae_for_install(formulae)
+      if formulae.include?(Formula["gh"])
+        [Formula["gh"]] | formulae
+      else
+        Homebrew::Attestation.gh_executable
+        formulae
+      end
     end
 
     # Verifies the given bottle against a cryptographic attestation of build provenance.
@@ -78,17 +141,21 @@ module Homebrew
       cmd += ["--cert-identity", signing_workflow] if signing_workflow.present?
 
       # Fail early if we have no credentials. The command below invariably
-      # fails without them, so this saves us a network roundtrip before
-      # presenting the user with the same error.
+      # fails without them, so this saves us an unnecessary subshell.
       credentials = GitHub::API.credentials
       raise GhAuthNeeded, "missing credentials" if credentials.blank?
 
       begin
-        result = system_command!(gh_executable, args: cmd, env: { "GH_TOKEN" => credentials },
-                                secrets: [credentials])
+        result = system_command!(gh_executable, args: cmd,
+                                 env: { "GH_TOKEN" => credentials, "GH_HOST" => "github.com" },
+                                 secrets: [credentials], print_stderr: false, chdir: HOMEBREW_TEMP)
       rescue ErrorDuringExecution => e
         # Even if we have credentials, they may be invalid or malformed.
-        raise GhAuthNeeded, "invalid credentials" if e.status.exitstatus == 4
+        if e.status.exitstatus == 4 || e.stderr.include?("HTTP 401: Bad credentials")
+          raise GhAuthInvalid, "invalid credentials"
+        end
+
+        raise MissingAttestationError, "attestation not found: #{e}" if e.stderr.include?("HTTP 404: Not Found")
 
         raise InvalidAttestationError, "attestation verification failed: #{e}"
       end
@@ -152,7 +219,7 @@ module Homebrew
         # attestations currently do not include reusable workflow state by default.
         attestation = check_attestation bottle, HOMEBREW_CORE_REPO
         return attestation
-      rescue InvalidAttestationError
+      rescue MissingAttestationError
         odebug "falling back on backfilled attestation for #{bottle}"
 
         # Our backfilled attestation is a little unique: the subject is not just the bottle

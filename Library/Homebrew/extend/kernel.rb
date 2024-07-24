@@ -3,6 +3,7 @@
 
 # Contains shorthand Homebrew utility methods like `ohai`, `opoo`, `odisabled`.
 # TODO: move these out of `Kernel`.
+
 module Kernel
   def require?(path)
     return false if path.nil?
@@ -74,6 +75,9 @@ module Kernel
   # @api public
   sig { params(message: T.any(String, Exception)).void }
   def onoe(message)
+    require "utils/formatter"
+    require "utils/github/actions"
+
     Tty.with($stderr) do |stderr|
       stderr.puts Formatter.error(message, label: "Error")
       GitHub::Actions.puts_annotation_if_env_set(:error, message.to_s)
@@ -149,6 +153,8 @@ module Kernel
 
     backtrace.each do |line|
       next unless (match = line.match(HOMEBREW_TAP_PATH_REGEX))
+
+      require "tap"
 
       tap = Tap.fetch(match[:user], match[:repo])
       tap_message = +"\nPlease report this issue to the #{tap.full_name} tap"
@@ -343,30 +349,26 @@ module Kernel
     end
   end
 
-  def ignore_interrupts(_opt = nil)
-    # rubocop:disable Style/GlobalVars
-    $ignore_interrupts_nesting_level = 0 unless defined?($ignore_interrupts_nesting_level)
-    $ignore_interrupts_nesting_level += 1
+  IGNORE_INTERRUPTS_MUTEX = Thread::Mutex.new.freeze
 
-    $ignore_interrupts_interrupted = false unless defined?($ignore_interrupts_interrupted)
-    old_sigint_handler = trap(:INT) do
-      $ignore_interrupts_interrupted = true
-      $stderr.print "\n"
-      $stderr.puts "One sec, cleaning up..."
-    end
+  def ignore_interrupts
+    IGNORE_INTERRUPTS_MUTEX.synchronize do
+      interrupted = T.let(false, T::Boolean)
+      old_sigint_handler = trap(:INT) do
+        interrupted = true
 
-    begin
-      yield
-    ensure
-      trap(:INT, old_sigint_handler)
+        $stderr.print "\n"
+        $stderr.puts "One sec, cleaning up..."
+      end
 
-      $ignore_interrupts_nesting_level -= 1
-      if $ignore_interrupts_nesting_level == 0 && $ignore_interrupts_interrupted
-        $ignore_interrupts_interrupted = false
-        raise Interrupt
+      begin
+        yield
+      ensure
+        trap(:INT, old_sigint_handler)
+
+        raise Interrupt if interrupted
       end
     end
-    # rubocop:enable Style/GlobalVars
   end
 
   def redirect_stdout(file)

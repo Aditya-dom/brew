@@ -152,6 +152,10 @@ module Homebrew
                      "budding) by e.g. turning warnings into errors.",
         boolean:     true,
       },
+      HOMEBREW_DISABLE_DEBREW:                   {
+        description: "If set, the interactive formula debugger available via `--debug` will be disabled.",
+        boolean:     true,
+      },
       HOMEBREW_DISABLE_LOAD_FORMULA:             {
         description: "If set, refuse to load formulae. This is useful when formulae are not trusted (such " \
                      "as in pull requests).",
@@ -379,6 +383,11 @@ module Homebrew
         description: "If set, `brew update` will not show the list of newly added formulae/casks.",
         boolean:     true,
       },
+      HOMEBREW_NO_VERIFY_ATTESTATIONS:           {
+        description: "If set, Homebrew not verify cryptographic attestations of build provenance for bottles " \
+                     "from homebrew-core.",
+        boolean:     true,
+      },
       HOMEBREW_PIP_INDEX_URL:                    {
         description:  "If set, `brew install` <formula> will use this URL to download PyPI package resources.",
         default_text: "`https://pypi.org/simple`.",
@@ -555,6 +564,11 @@ module Homebrew
     sig { returns(T::Boolean) }
     def automatically_set_no_install_from_api?
       ENV["HOMEBREW_AUTOMATICALLY_SET_NO_INSTALL_FROM_API"].present?
+    end
+
+    sig { returns(T::Boolean) }
+    def devcmdrun?
+      Homebrew::Settings.read("devcmdrun") == "true"
     end
   end
 end

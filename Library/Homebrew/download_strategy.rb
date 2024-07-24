@@ -433,13 +433,11 @@ class CurlDownloadStrategy < AbstractFileDownloadStrategy
         rescue ErrorDuringExecution
           raise CurlDownloadStrategyError, url
         end
-        ignore_interrupts do
-          cached_location.dirname.mkpath
-          temporary_path.rename(cached_location)
-          symlink_location.dirname.mkpath
-        end
+        cached_location.dirname.mkpath
+        temporary_path.rename(cached_location)
       end
 
+      symlink_location.dirname.mkpath
       FileUtils.ln_s cached_location.relative_path_from(symlink_location.dirname), symlink_location, force: true
     rescue CurlDownloadStrategyError
       raise if urls.empty?
@@ -648,15 +646,22 @@ class CurlApacheMirrorDownloadStrategy < CurlDownloadStrategy
   def combined_mirrors
     return @combined_mirrors if defined?(@combined_mirrors)
 
-    backup_mirrors = apache_mirrors.fetch("backup", [])
-                                   .map { |mirror| "#{mirror}#{apache_mirrors["path_info"]}" }
+    backup_mirrors = unless apache_mirrors["in_attic"]
+      apache_mirrors.fetch("backup", [])
+                    .map { |mirror| "#{mirror}#{apache_mirrors["path_info"]}" }
+    end
 
     @combined_mirrors = [*@mirrors, *backup_mirrors]
   end
 
   def resolve_url_basename_time_file_size(url, timeout: nil)
     if url == self.url
-      super("#{apache_mirrors["preferred"]}#{apache_mirrors["path_info"]}", timeout:)
+      preferred = if apache_mirrors["in_attic"]
+        "https://archive.apache.org/dist/"
+      else
+        apache_mirrors["preferred"]
+      end
+      super("#{preferred}#{apache_mirrors["path_info"]}", timeout:)
     else
       super
     end
@@ -737,6 +742,8 @@ class SubversionDownloadStrategy < VCSDownloadStrategy
   # @api public
   sig { returns(Time) }
   def source_modified_time
+    require "utils/svn"
+
     time = if Version.new(T.must(Utils::Svn.version)) >= Version.new("1.9")
       out, = silent_command("svn", args: ["info", "--show-item", "last-changed-date"], chdir: cached_location)
       out
@@ -789,6 +796,7 @@ class SubversionDownloadStrategy < VCSDownloadStrategy
 
     args << "--ignore-externals" if ignore_externals
 
+    require "utils/svn"
     args.concat Utils::Svn.invalid_cert_flags if meta[:trust_cert] == true
 
     if target.directory?
@@ -921,6 +929,7 @@ class GitDownloadStrategy < VCSDownloadStrategy
   def partial_clone_sparse_checkout?
     return false if @only_path.blank?
 
+    require "utils/git"
     Utils::Git.supports_partial_clone_sparse_checkout?
   end
 
@@ -1038,13 +1047,15 @@ class GitDownloadStrategy < VCSDownloadStrategy
   sig { params(timeout: T.nilable(Time)).void }
   def update_submodules(timeout: nil)
     command! "git",
-             args:    ["submodule", "foreach", "--recursive", "git submodule sync"],
-             chdir:   cached_location,
-             timeout: Utils::Timer.remaining(timeout)
+             args:      ["submodule", "foreach", "--recursive", "git submodule sync"],
+             chdir:     cached_location,
+             timeout:   Utils::Timer.remaining(timeout),
+             reset_uid: true
     command! "git",
-             args:    ["submodule", "update", "--init", "--recursive"],
-             chdir:   cached_location,
-             timeout: Utils::Timer.remaining(timeout)
+             args:      ["submodule", "update", "--init", "--recursive"],
+             chdir:     cached_location,
+             timeout:   Utils::Timer.remaining(timeout),
+             reset_uid: true
     fix_absolute_submodule_gitdir_references!
   end
 
@@ -1057,8 +1068,9 @@ class GitDownloadStrategy < VCSDownloadStrategy
   # See https://github.com/Homebrew/homebrew-core/pull/1520 for an example.
   def fix_absolute_submodule_gitdir_references!
     submodule_dirs = command!("git",
-                              args:  ["submodule", "--quiet", "foreach", "--recursive", "pwd"],
-                              chdir: cached_location).stdout
+                              args:      ["submodule", "--quiet", "foreach", "--recursive", "pwd"],
+                              chdir:     cached_location,
+                              reset_uid: true).stdout
 
     submodule_dirs.lines.map(&:chomp).each do |submodule_dir|
       work_dir = Pathname.new(submodule_dir)
