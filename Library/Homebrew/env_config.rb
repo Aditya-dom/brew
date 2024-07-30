@@ -1,4 +1,4 @@
-# typed: true
+# typed: strict
 # frozen_string_literal: true
 
 module Homebrew
@@ -8,7 +8,7 @@ module Homebrew
   module EnvConfig
     module_function
 
-    ENVS = {
+    ENVS = T.let({
       HOMEBREW_ALLOWED_TAPS:                     {
         description: "A space-separated list of taps. Homebrew will refuse to install a " \
                      "formula unless it and all of its dependencies are in an official tap " \
@@ -217,6 +217,11 @@ module Homebrew
       HOMEBREW_FORBIDDEN_TAPS:                   {
         description: "A space-separated list of taps. Homebrew will refuse to install a " \
                      "formula if it or any of its dependencies is in a tap on this list.",
+      },
+      HOMEBREW_FORBID_PACKAGES_FROM_PATHS:       {
+        description: "If set, Homebrew will refuse to read formulae or casks provided from file paths, " \
+                     "e.g. `brew install ./package.rb`.",
+        boolean:     true,
       },
       HOMEBREW_FORCE_BREWED_CA_CERTIFICATES:     {
         description: "If set, always use a Homebrew-installed `ca-certificates` rather than the system version. " \
@@ -481,7 +486,7 @@ module Homebrew
         description: "A comma-separated list of hostnames and domain names excluded " \
                      "from proxying by `curl`(1), `git`(1) and `svn`(1) when downloading through Homebrew.",
       },
-    }.freeze
+    }.freeze, T::Hash[Symbol, T::Hash[Symbol, T.untyped]])
 
     sig { params(env: Symbol, hash: T::Hash[Symbol, T.untyped]).returns(String) }
     def env_method_name(env, hash)
@@ -492,10 +497,10 @@ module Homebrew
       method_name
     end
 
-    CUSTOM_IMPLEMENTATIONS = Set.new([
+    CUSTOM_IMPLEMENTATIONS = T.let(Set.new([
       :HOMEBREW_MAKE_JOBS,
       :HOMEBREW_CASK_OPTS,
-    ]).freeze
+    ]).freeze, T::Set[Symbol])
 
     ENVS.each do |env, hash|
       # Needs a custom implementation.
