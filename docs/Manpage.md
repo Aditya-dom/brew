@@ -2775,6 +2775,10 @@ Check for typechecking errors using Sorbet.
 
 : Try upgrading `typed` sigils.
 
+`--lsp`
+
+: Start the Sorbet LSP server.
+
 `--dir`
 
 : Typecheck all files in a specific directory.
@@ -3872,6 +3876,11 @@ command execution e.g. `$(cat file)`.
   `$XDG_CONFIG_HOME` is set or `$HOME/.homebrew/livecheck_watchlist.txt`
   otherwise.
 
+`HOMEBREW_LOCK_CONTEXT`
+
+: If set, Homebrew will add this output as additional context for locking
+  errors. This is useful when running `brew` in the background.
+
 `HOMEBREW_LOGS`
 
 : Use this directory to store log files.
@@ -4129,8 +4138,8 @@ Homebrew's maintainers are Alexander Bayandin, Bevan Kay, Bo Anderson, Branch
 Vincent, Caleb Xu, Carlo Cabrera, Douglas Eichelberger, Dustin Rodrigues, Eric
 Knibbe, FX Coudert, Issy Long, Justin Krehel, Klaus Hipp, Markus Reiter, Miccal
 Matthews, Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick
-Linnane, Razvan Azamfirei, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean
-Molenaar, Thierry Moisan, Timothy Sutton, William Woodruff and Štefan Baebler.
+Linnane, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean Molenaar, Thierry
+Moisan, Timothy Sutton, William Woodruff and Štefan Baebler.
 
 Former maintainers with significant contributions include Misty De Méo, Shaun
 Jackman, Vítor Galvão, Claudia Pellegrino, Seeker, Jan Viljanen, JCount,
