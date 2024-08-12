@@ -11,9 +11,9 @@ RSpec.describe Homebrew::FormulaAuditor do
     @count += 1
   end
   let(:formula_subpath) { "Formula/foo#{foo_version}.rb" }
-  let(:origin_tap_path) { Tap::TAP_DIRECTORY/"homebrew/homebrew-foo" }
+  let(:origin_tap_path) { HOMEBREW_TAP_DIRECTORY/"homebrew/homebrew-foo" }
   let(:origin_formula_path) { origin_tap_path/formula_subpath }
-  let(:tap_path) { Tap::TAP_DIRECTORY/"homebrew/homebrew-bar" }
+  let(:tap_path) { HOMEBREW_TAP_DIRECTORY/"homebrew/homebrew-bar" }
   let(:formula_path) { tap_path/formula_subpath }
 
   def formula_auditor(name, text, options = {})
@@ -476,7 +476,7 @@ RSpec.describe Homebrew::FormulaAuditor do
     end
   end
 
-  describe "#audit_formula_name" do
+  describe "#audit_name" do
     specify "no issue" do
       fa = formula_auditor "foo", <<~RUBY, core_tap: true, strict: true
         class Foo < Formula
@@ -485,7 +485,7 @@ RSpec.describe Homebrew::FormulaAuditor do
         end
       RUBY
 
-      fa.audit_formula_name
+      fa.audit_name
       expect(fa.problems).to be_empty
     end
 
@@ -497,7 +497,7 @@ RSpec.describe Homebrew::FormulaAuditor do
         end
       RUBY
 
-      fa.audit_formula_name
+      fa.audit_name
       expect(fa.problems.first[:message]).to match "must not contain uppercase letters"
     end
   end
