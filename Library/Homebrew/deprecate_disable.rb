@@ -67,7 +67,27 @@ module DeprecateDisable
     if !disable_date && formula_or_cask.deprecation_date
       disable_date = formula_or_cask.deprecation_date >> REMOVE_DISABLED_TIME_WINDOW
     end
-    message = "#{message} It will be disabled on #{disable_date}." if disable_date
+    if disable_date
+      message += if disable_date < Date.today
+        " It was disabled on #{disable_date}."
+      else
+        " It will be disabled on #{disable_date}."
+      end
+    end
+
+    replacement = if formula_or_cask.deprecated?
+      formula_or_cask.deprecation_replacement
+    elsif formula_or_cask.disabled?
+      formula_or_cask.disable_replacement
+    end
+
+    if replacement.present?
+      message << "\n"
+      message << <<~EOS
+        Replacement:
+          brew install #{replacement}
+      EOS
+    end
 
     message
   end

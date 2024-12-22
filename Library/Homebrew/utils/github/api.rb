@@ -80,7 +80,7 @@ module GitHub
     class AuthenticationFailedError < Error
       def initialize(credentials_type, github_message)
         @github_message = github_message
-        message = +"GitHub API Error: #{github_message}\n"
+        message = "GitHub API Error: #{github_message}\n"
         message << case credentials_type
         when :github_cli_token
           <<~EOS
@@ -135,15 +135,6 @@ module GitHub
       JSON::ParserError,
     ].freeze
 
-    sig { returns(T.nilable(String)) }
-    private_class_method def self.uid_home
-      require "etc"
-      Etc.getpwuid(Process.uid)&.dir
-    rescue ArgumentError
-      # Cover for misconfigured NSS setups
-      nil
-    end
-
     # Gets the token from the GitHub CLI for github.com.
     sig { returns(T.nilable(String)) }
     def self.github_cli_token
@@ -152,7 +143,7 @@ module GitHub
         # Avoid `Formula["gh"].opt_bin` so this method works even with `HOMEBREW_DISABLE_LOAD_FORMULA`.
         env = {
           "PATH" => PATH.new(HOMEBREW_PREFIX/"opt/gh/bin", ENV.fetch("PATH")),
-          "HOME" => uid_home,
+          "HOME" => Utils::UID.uid_home,
         }.compact
         gh_out, _, result = system_command "gh",
                                            args:         ["auth", "token", "--hostname", "github.com"],
@@ -173,7 +164,7 @@ module GitHub
         git_credential_out, _, result = system_command "git",
                                                        args:         ["credential-osxkeychain", "get"],
                                                        input:        ["protocol=https\n", "host=github.com\n"],
-                                                       env:          { "HOME" => uid_home }.compact,
+                                                       env:          { "HOME" => Utils::UID.uid_home }.compact,
                                                        print_stderr: false
         return unless result.success?
 
@@ -348,13 +339,15 @@ module GitHub
 
     sig {
       params(
-        query:     String,
-        variables: T.nilable(T::Hash[Symbol, T.untyped]),
-        _block:    T.proc.params(data: T::Hash[String, T.untyped]).returns(T::Hash[String, T.untyped]),
+        query:        String,
+        variables:    T.nilable(T::Hash[Symbol, T.untyped]),
+        scopes:       T::Array[String],
+        raise_errors: T::Boolean,
+        _block:       T.proc.params(data: T::Hash[String, T.untyped]).returns(T::Hash[String, T.untyped]),
       ).void
     }
-    def self.paginate_graphql(query, variables: nil, &_block)
-      result = API.open_graphql(query, variables:)
+    def self.paginate_graphql(query, variables: nil, scopes: [].freeze, raise_errors: true, &_block)
+      result = API.open_graphql(query, variables:, scopes:, raise_errors:)
 
       has_next_page = T.let(true, T::Boolean)
       variables ||= {}
@@ -363,7 +356,7 @@ module GitHub
         has_next_page = page_info["hasNextPage"]
         if has_next_page
           variables[:after] = page_info["endCursor"]
-          result = API.open_graphql(query, variables:)
+          result = API.open_graphql(query, variables:, scopes:, raise_errors:)
         end
       end
     end

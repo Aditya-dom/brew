@@ -87,13 +87,16 @@ module Cask
       :deprecated?,
       :deprecation_date,
       :deprecation_reason,
+      :deprecation_replacement,
       :disable!,
       :disabled?,
       :disable_date,
       :disable_reason,
+      :disable_replacement,
       :discontinued?, # TODO: remove once discontinued? is removed (4.5.0)
       :livecheck,
-      :livecheckable?,
+      :livecheck_defined?,
+      :livecheckable?, # TODO: remove once `#livecheckable?` is removed
       :on_system_blocks_exist?,
       :on_system_block_min_os,
       :depends_on_set_in_block?,
@@ -105,10 +108,10 @@ module Cask
     extend Attrable
     include OnSystem::MacOSOnly
 
-    attr_reader :cask, :token, :deprecation_date, :deprecation_reason, :disable_date, :disable_reason,
-                :on_system_block_min_os
+    attr_reader :cask, :token, :deprecation_date, :deprecation_reason, :deprecation_replacement, :disable_date,
+                :disable_reason, :disable_replacement, :on_system_block_min_os
 
-    attr_predicate :deprecated?, :disabled?, :livecheckable?, :on_system_blocks_exist?, :depends_on_set_in_block?
+    attr_predicate :deprecated?, :disabled?, :livecheck_defined?, :on_system_blocks_exist?, :depends_on_set_in_block?
 
     def initialize(cask)
       @cask = cask
@@ -411,7 +414,7 @@ module Cask
     end
 
     def discontinued?
-      odeprecated "`discontinued?`", "`deprecated?` or `disabled?`"
+      odisabled "`discontinued?`", "`deprecated?` or `disabled?`"
       @caveats&.discontinued? == true
     end
 
@@ -429,12 +432,20 @@ module Cask
       @livecheck ||= Livecheck.new(cask)
       return @livecheck unless block
 
-      if !@cask.allow_reassignment && @livecheckable
+      if !@cask.allow_reassignment && @livecheck_defined
         raise CaskInvalidError.new(cask, "'livecheck' stanza may only appear once.")
       end
 
-      @livecheckable = true
+      @livecheck_defined = true
       @livecheck.instance_eval(&block)
+    end
+
+    # Whether the cask contains a `livecheck` block. This is a legacy alias
+    # for `#livecheck_defined?`.
+    sig { returns(T::Boolean) }
+    def livecheckable?
+      # odeprecated "`livecheckable?`", "`livecheck_defined?`"
+      @livecheck_defined == true
     end
 
     # Declare that a cask is no longer functional or supported.
@@ -442,11 +453,12 @@ module Cask
     # NOTE: A warning will be shown when trying to install this cask.
     #
     # @api public
-    def deprecate!(date:, because:)
+    def deprecate!(date:, because:, replacement: nil)
       @deprecation_date = Date.parse(date)
       return if @deprecation_date > Date.today
 
       @deprecation_reason = because
+      @deprecation_replacement = replacement
       @deprecated = true
     end
 
@@ -455,16 +467,18 @@ module Cask
     # NOTE: An error will be thrown when trying to install this cask.
     #
     # @api public
-    def disable!(date:, because:)
+    def disable!(date:, because:, replacement: nil)
       @disable_date = Date.parse(date)
 
       if @disable_date > Date.today
         @deprecation_reason = because
+        @deprecation_replacement = replacement
         @deprecated = true
         return
       end
 
       @disable_reason = because
+      @disable_replacement = replacement
       @disabled = true
     end
 

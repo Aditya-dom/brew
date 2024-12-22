@@ -499,6 +499,11 @@ Display brief statistics for your Homebrew installation. If a *`formula`* or
 : Open the GitHub source page for *`formula`* and *`cask`* in a browser. To view
   the history locally: `brew log -p` *`formula`* or *`cask`*
 
+`--fetch-manifest`
+
+: Fetch GitHub Packages manifest for extra information when *`formula`* is not
+  installed.
+
 `--json`
 
 : Print a JSON representation. Currently the default value for *`version`* is
@@ -587,7 +592,7 @@ upgrade *`formula`* if it is already installed but outdated.
 `--cc`
 
 : Attempt to compile using the specified *`compiler`*, which should be the name
-  of the compiler's executable, e.g. `gcc-7` for GCC 7. In order to use LLVM's
+  of the compiler's executable, e.g. `gcc-9` for GCC 9. In order to use LLVM's
   clang, specify `llvm_clang`. To use the Apple-provided clang, specify `clang`.
   This option will only accept compilers that are provided by Homebrew or
   bundled with macOS. Please do not file issues if you encounter errors while
@@ -760,6 +765,14 @@ paths within its current keg. If *`cask`* is provided, list its artifacts.
 `--installed-as-dependency`
 
 : List the formulae installed as dependencies.
+
+`--poured-from-bottle`
+
+: List the formulae installed from a bottle.
+
+`--built-from-source`
+
+: List the formulae compiled from source.
 
 `-1`
 
@@ -1481,8 +1494,8 @@ dependency for their stable builds.
 
 Display Homebrew's download cache. See also `HOMEBREW_CACHE`.
 
-If *`formula`* is provided, display the file or directory used to cache
-*`formula`*.
+If a *`formula`* or *`cask`* is provided, display the file or directory used to
+cache it.
 
 `--os`
 
@@ -2142,6 +2155,17 @@ see: <https://rubydoc.brew.sh/Formula>
 
 : Ignore errors for disallowed formula names and names that shadow aliases.
 
+### `debugger` \[`--open`\] *`command`* \[...\]
+
+Run the specified Homebrew command in debug mode.
+
+To pass flags to the command, use `--` to separate them from the `brew` flags.
+For example: `brew debugger -- list --formula`.
+
+`-O`, `--open`
+
+: Start remote debugging over a Unix socket.
+
 ### `dispatch-build-bottle` \[*`options`*\] *`formula`* \[...\]
 
 Build bottles for these formulae with GitHub Actions.
@@ -2751,7 +2775,7 @@ Run Homebrew's unit and integration tests.
 
 : Randomise tests with the specified *`value`* instead of a random seed.
 
-### `typecheck`, `tc` \[*`options`*\]
+### `typecheck`, `tc` \[*`options`*\] \[*`tap`* ...\]
 
 Check for typechecking errors using Sorbet.
 
@@ -3044,16 +3068,6 @@ to one or more of the following environment variables:
 `HOMEBREW_BUNDLE_MAS_SKIP`, `HOMEBREW_BUNDLE_WHALEBREW_SKIP`,
 `HOMEBREW_BUNDLE_TAP_SKIP`.
 
-`brew bundle` will output a `Brewfile.lock.json` in the same directory as the
-`Brewfile` if all dependencies are installed successfully. This contains
-dependency and system status information which can be useful for debugging `brew
-bundle` failures and replicating a "last known good build" state. You can
-opt-out of this behaviour by setting the `HOMEBREW_BUNDLE_NO_LOCK` environment
-variable or passing the `--no-lock` option. You may wish to check this file into
-the same version control system as your `Brewfile` (or ensure your version
-control system ignores it if you'd prefer to rely on debugging information from
-a local machine).
-
 `brew bundle dump`
 
 : Write all installed casks/formulae/images/taps into a `Brewfile` in the
@@ -3124,37 +3138,38 @@ flags which will help with finding keg-only dependencies like `openssl`,
   is enabled by default if `HOMEBREW_BUNDLE_INSTALL_CLEANUP` is set and
   `--global` is passed.
 
-`--no-lock`
-
-: `install` does not output a `Brewfile.lock.json`.
-
 `--all`
 
 : `list` all dependencies.
 
 `--formula`
 
-: `list` Homebrew formula dependencies.
+: `list` or `dump` Homebrew formula dependencies.
 
 `--cask`
 
-: `list` Homebrew cask dependencies.
+: `list` or `dump` Homebrew cask dependencies.
 
 `--tap`
 
-: `list` Homebrew tap dependencies.
+: `list` or `dump` Homebrew tap dependencies.
 
 `--mas`
 
-: `list` Mac App Store dependencies.
+: `list` or `dump` Mac App Store dependencies.
 
 `--whalebrew`
 
-: `list` Whalebrew dependencies.
+: `list` or `dump` Whalebrew dependencies.
 
 `--vscode`
 
-: `list` VSCode extensions.
+: `list` or `dump` VSCode extensions.
+
+`--no-vscode`
+
+: `dump` without VSCode extensions. This is enabled by default if
+  `HOMEBREW_BUNDLE_DUMP_NO_VSCODE` is set.
 
 `--describe`
 
@@ -3229,6 +3244,11 @@ If `sudo` is passed, operate on `/Library/LaunchDaemons` or
 `--sudo-service-user`
 
 : When run as root on macOS, run the service(s) as this user.
+
+`--max-wait`
+
+: Wait at most this many seconds for `stop` to finish stopping a service. Omit
+  this flag or set this to zero (0) seconds to wait indefinitely.
 
 `--all`
 
@@ -3425,6 +3445,10 @@ and Linux workers.
 
 : Use these skipped or failed formulae from formulae steps for a formulae
   dependents step.
+
+`--tested-formulae`
+
+: Use these tested formulae from formulae steps for a formulae dependents step.
 
 ### `unalias` *`alias`* \[...\]
 
@@ -3765,8 +3789,8 @@ command execution e.g. `$(cat file)`.
 
 `HOMEBREW_FORBIDDEN_LICENSES`
 
-: A space-separated list of licenses. Homebrew will refuse to install a formula
-  if it or any of its dependencies has a license on this list.
+: A space-separated list of SPDX license identifiers. Homebrew will refuse to
+  install a formula if it or any of its dependencies has a license on this list.
 
 `HOMEBREW_FORBIDDEN_OWNER`
 
@@ -3849,13 +3873,23 @@ command execution e.g. `$(cat file)`.
 : Use this username when accessing the GitHub Packages Registry (where bottles
   may be stored).
 
+`HOMEBREW_GIT_COMMITTER_EMAIL`
+
+: Set the Git committer email to this value.
+
+`HOMEBREW_GIT_COMMITTER_NAME`
+
+: Set the Git committer name to this value.
+
 `HOMEBREW_GIT_EMAIL`
 
-: Set the Git author and committer email to this value.
+: Set the Git author name and, if `HOMEBREW_GIT_COMMITTER_EMAIL` is unset,
+  committer email to this value.
 
 `HOMEBREW_GIT_NAME`
 
-: Set the Git author and committer name to this value.
+: Set the Git author name and, if `HOMEBREW_GIT_COMMITTER_NAME` is unset,
+  committer name to this value.
 
 `HOMEBREW_GIT_PATH`
 
@@ -4138,15 +4172,15 @@ Homebrew's Technical Steering Committee is Bo Anderson, FX Coudert, Michka
 Popoff, Mike McQuaid and Rylan Polster.
 
 Homebrew's maintainers are Alexander Bayandin, Bevan Kay, Bo Anderson, Branch
-Vincent, Caleb Xu, Carlo Cabrera, Douglas Eichelberger, Dustin Rodrigues, Eric
-Knibbe, FX Coudert, Issy Long, Justin Krehel, Klaus Hipp, Markus Reiter, Miccal
-Matthews, Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick
-Linnane, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean Molenaar, Thierry
-Moisan, Timothy Sutton, William Woodruff and Štefan Baebler.
+Vincent, Caleb Xu, Carlo Cabrera, Daeho Ro, Douglas Eichelberger, Dustin
+Rodrigues, Eric Knibbe, FX Coudert, Issy Long, Justin Krehel, Klaus Hipp, Markus
+Reiter, Michael Cho, Michka Popoff, Mike McQuaid, Nanda H Krishna, Patrick
+Linnane, Rui Chen, Ruoyu Zhong, Rylan Polster, Sam Ford, Sean Molenaar, Štefan
+Baebler, Thierry Moisan, Timothy Sutton and William Woodruff.
 
-Former maintainers with significant contributions include Misty De Méo, Shaun
-Jackman, Vítor Galvão, Claudia Pellegrino, Seeker, Jan Viljanen, JCount,
-commitay, Dominyk Tiller, Tim Smith, Baptiste Fontaine, Xu Cheng, Martin
+Former maintainers with significant contributions include Miccal Matthews, Misty
+De Méo, Shaun Jackman, Vítor Galvão, Claudia Pellegrino, Seeker, Jan Viljanen,
+JCount, commitay, Dominyk Tiller, Tim Smith, Baptiste Fontaine, Xu Cheng, Martin
 Afanasjew, Brett Koonce, Charlie Sharpsteen, Jack Nagel, Adam Vandenberg, Andrew
 Janke, Alex Dunn, neutric, Tomasz Pajor, Uladzislau Shablinski, Alyssa Ross,
 ilovezfs, Chongyu Zhu and Homebrew's creator: Max Howell.

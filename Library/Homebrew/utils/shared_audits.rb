@@ -8,11 +8,9 @@ require "utils/github/api"
 module SharedAudits
   URL_TYPE_HOMEPAGE = "homepage URL"
 
-  module_function
-
-  sig { params(product: String, cycle: String).returns(T.nilable(T::Hash[String, T::Hash[Symbol, T.untyped]])) }
-  def eol_data(product, cycle)
-    @eol_data ||= T.let({}, T.nilable(T::Hash[String, T::Hash[String, T.untyped]]))
+  sig { params(product: String, cycle: String).returns(T.nilable(T::Hash[String, T.untyped])) }
+  def self.eol_data(product, cycle)
+    @eol_data ||= T.let({}, T.nilable(T::Hash[String, T.untyped]))
     @eol_data["#{product}/#{cycle}"] ||= begin
       out, _, status = Utils::Curl.curl_output("--location", "https://endoflife.date/api/#{product}/#{cycle}.json")
       json = JSON.parse(out) if status.success?
@@ -22,7 +20,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String).returns(T.nilable(T::Hash[String, T.untyped])) }
-  def github_repo_data(user, repo)
+  def self.github_repo_data(user, repo)
     @github_repo_data ||= T.let({}, T.nilable(T::Hash[String, T.untyped]))
     @github_repo_data["#{user}/#{repo}"] ||= GitHub.repository(user, repo)
 
@@ -34,7 +32,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String, tag: String).returns(T.nilable(T::Hash[String, T.untyped])) }
-  def github_release_data(user, repo, tag)
+  private_class_method def self.github_release_data(user, repo, tag)
     id = "#{user}/#{repo}/#{tag}"
     url = "#{GitHub::API_URL}/repos/#{user}/#{repo}/releases/tags/#{tag}"
     @github_release_data ||= T.let({}, T.nilable(T::Hash[String, T.untyped]))
@@ -54,7 +52,7 @@ module SharedAudits
       T.nilable(String),
     )
   }
-  def github_release(user, repo, tag, formula: nil, cask: nil)
+  def self.github_release(user, repo, tag, formula: nil, cask: nil)
     release = github_release_data(user, repo, tag)
     return unless release
 
@@ -74,7 +72,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String).returns(T.nilable(T::Hash[String, T.untyped])) }
-  def gitlab_repo_data(user, repo)
+  def self.gitlab_repo_data(user, repo)
     @gitlab_repo_data ||= T.let({}, T.nilable(T::Hash[String, T.untyped]))
     @gitlab_repo_data["#{user}/#{repo}"] ||= begin
       out, _, status = Utils::Curl.curl_output("https://gitlab.com/api/v4/projects/#{user}%2F#{repo}")
@@ -85,7 +83,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String, tag: String).returns(T.nilable(T::Hash[String, T.untyped])) }
-  def gitlab_release_data(user, repo, tag)
+  private_class_method def self.gitlab_release_data(user, repo, tag)
     id = "#{user}/#{repo}/#{tag}"
     @gitlab_release_data ||= T.let({}, T.nilable(T::Hash[String, T.untyped]))
     @gitlab_release_data[id] ||= begin
@@ -103,7 +101,7 @@ module SharedAudits
       T.nilable(String),
     )
   }
-  def gitlab_release(user, repo, tag, formula: nil, cask: nil)
+  def self.gitlab_release(user, repo, tag, formula: nil, cask: nil)
     release = gitlab_release_data(user, repo, tag)
     return unless release
 
@@ -120,7 +118,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String).returns(T.nilable(String)) }
-  def github(user, repo)
+  def self.github(user, repo)
     metadata = github_repo_data(user, repo)
 
     return if metadata.nil?
@@ -138,7 +136,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String).returns(T.nilable(String)) }
-  def gitlab(user, repo)
+  def self.gitlab(user, repo)
     metadata = gitlab_repo_data(user, repo)
 
     return if metadata.nil?
@@ -154,7 +152,7 @@ module SharedAudits
   end
 
   sig { params(user: String, repo: String).returns(T.nilable(String)) }
-  def bitbucket(user, repo)
+  def self.bitbucket(user, repo)
     api_url = "https://api.bitbucket.org/2.0/repositories/#{user}/#{repo}"
     out, _, status = Utils::Curl.curl_output("--request", "GET", api_url)
     return unless status.success?
@@ -186,22 +184,29 @@ module SharedAudits
   end
 
   sig { params(url: String).returns(T.nilable(String)) }
-  def github_tag_from_url(url)
-    url = url.to_s
-    tag = url.match(%r{^https://github\.com/[\w-]+/[\w-]+/archive/refs/tags/([^/]+)\.(tar\.gz|zip)$})
-             .to_a
-             .second
-    tag ||= url.match(%r{^https://github\.com/[\w-]+/[\w-]+/releases/download/([^/]+)/})
-               .to_a
-               .second
-    tag
+  def self.github_tag_from_url(url)
+    tag = url[%r{^https://github\.com/[\w-]+/[\w.-]+/archive/refs/tags/(.+)\.(tar\.gz|zip)$}, 1]
+    tag || url[%r{^https://github\.com/[\w-]+/[\w.-]+/releases/download/([^/]+)/}, 1]
   end
 
   sig { params(url: String).returns(T.nilable(String)) }
-  def gitlab_tag_from_url(url)
-    url = url.to_s
-    url.match(%r{^https://gitlab\.com/[\w-]+/[\w-]+/-/archive/([^/]+)/})
-       .to_a
-       .second
+  def self.gitlab_tag_from_url(url)
+    url[%r{^https://gitlab\.com/(?:\w[\w.-]*/){2,}-/archive/([^/]+)/}, 1]
+  end
+
+  sig { params(formula_or_cask: T.any(Formula, Cask::Cask)).returns(T.nilable(String)) }
+  def self.check_deprecate_disable_reason(formula_or_cask)
+    return if !formula_or_cask.deprecated? && !formula_or_cask.disabled?
+
+    reason = formula_or_cask.deprecated? ? formula_or_cask.deprecation_reason : formula_or_cask.disable_reason
+    return unless reason.is_a?(Symbol)
+
+    reasons = if formula_or_cask.is_a?(Formula)
+      DeprecateDisable::FORMULA_DEPRECATE_DISABLE_REASONS
+    else
+      DeprecateDisable::CASK_DEPRECATE_DISABLE_REASONS
+    end
+
+    "#{reason} is not a valid deprecate! or disable! reason" unless reasons.include?(reason)
   end
 end

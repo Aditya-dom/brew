@@ -253,7 +253,8 @@ on_request: true)
         next if artifact.is_a?(Artifact::Binary) && !binaries?
 
         artifact.install_phase(
-          command: @command, verbose: verbose?, adopt: adopt?, force: force?, predecessor:,
+          command: @command, verbose: verbose?, adopt: adopt?, auto_updates: @cask.auto_updates,
+          force: force?, predecessor:
         )
         already_installed_artifacts.unshift(artifact)
       end
@@ -279,9 +280,16 @@ on_request: true)
       end
     end
 
+    sig { void }
     def check_requirements
+      check_stanza_os_requirements
       check_macos_requirements
       check_arch_requirements
+    end
+
+    sig { void }
+    def check_stanza_os_requirements
+      nil
     end
 
     def check_macos_requirements
@@ -367,6 +375,7 @@ on_request: true)
             force:                   false,
           ).install
         else
+          Homebrew::Install.perform_preinstall_checks_once
           fi = FormulaInstaller.new(
             cask_or_formula,
             **{
@@ -399,7 +408,7 @@ on_request: true)
 
       extension = @cask.loaded_from_api? ? "json" : "rb"
       (metadata_subdir/"#{@cask.token}.#{extension}").write @cask.source
-      old_savedir&.rmtree
+      FileUtils.rm_r(old_savedir) if old_savedir
     end
 
     def save_config_file
@@ -454,8 +463,8 @@ on_request: true)
     def restore_backup
       return if !backup_path.directory? || !backup_metadata_path.directory?
 
-      @cask.staged_path.rmtree if @cask.staged_path.exist?
-      @cask.metadata_versioned_path.rmtree if @cask.metadata_versioned_path.exist?
+      FileUtils.rm_r(@cask.staged_path) if @cask.staged_path.exist?
+      FileUtils.rm_r(@cask.metadata_versioned_path) if @cask.metadata_versioned_path.exist?
 
       backup_path.rename @cask.staged_path
       backup_metadata_path.rename @cask.metadata_versioned_path
@@ -601,8 +610,8 @@ on_request: true)
           next if dep_tap.blank? || (dep_tap.allowed_by_env? && !dep_tap.forbidden_by_env?)
 
           dep_full_name = cask_or_formula.full_name
-          error_message = +"The installation of #{@cask} has a dependency #{dep_full_name}\n" \
-                           "from the #{dep_tap} tap but #{owner} "
+          error_message = "The installation of #{@cask} has a dependency #{dep_full_name}\n" \
+                          "from the #{dep_tap} tap but #{owner} "
           error_message << "has not allowed this tap in `HOMEBREW_ALLOWED_TAPS`" unless dep_tap.allowed_by_env?
           error_message << " and\n" if !dep_tap.allowed_by_env? && dep_tap.forbidden_by_env?
           error_message << "has forbidden this tap in `HOMEBREW_FORBIDDEN_TAPS`" if dep_tap.forbidden_by_env?
@@ -615,8 +624,8 @@ on_request: true)
       cask_tap = @cask.tap
       return if cask_tap.blank? || (cask_tap.allowed_by_env? && !cask_tap.forbidden_by_env?)
 
-      error_message = +"The installation of #{@cask.full_name} has the tap #{cask_tap}\n" \
-                       "but #{owner} "
+      error_message = "The installation of #{@cask.full_name} has the tap #{cask_tap}\n" \
+                      "but #{owner} "
       error_message << "has not allowed this tap in `HOMEBREW_ALLOWED_TAPS`" unless cask_tap.allowed_by_env?
       error_message << " and\n" if !cask_tap.allowed_by_env? && cask_tap.forbidden_by_env?
       error_message << "has forbidden this tap in `HOMEBREW_FORBIDDEN_TAPS`" if cask_tap.forbidden_by_env?
@@ -708,3 +717,5 @@ on_request: true)
     end
   end
 end
+
+require "extend/os/cask/installer"
